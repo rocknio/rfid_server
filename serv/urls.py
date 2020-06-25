@@ -7,6 +7,7 @@ from serv.tm.task_query_handler import TaskQueryHandlerTM
 from serv.tm.batch_ship_notify_handler import BatchShipNotifyHandlerTM
 from serv.tm.list_count_notify_handler import ListCountNotifyHandlerTM
 from serv.tm.return_track_handler import ReturnTrackHandlerTM
+from serv.scm.scm_handler import ScmHandler
 
 __author__ = 'Ennis'
 
@@ -18,6 +19,7 @@ app_handlers = [
     (r'/sendrequest', BatchShipNotifyHandlerTM),
     (r'/listcountrequest', ListCountNotifyHandlerTM),
     (r'/returnconfirm', ReturnTrackHandlerTM),  # 对接手持机接口
+    (r'/orderconfirm', ScmHandler)
 
 ]
 
