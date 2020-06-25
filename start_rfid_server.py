@@ -2,6 +2,8 @@
 import logging
 import logging.handlers
 import os
+import sys
+import asyncio
 
 import tornado.httpserver
 import tornado.web
@@ -67,12 +69,15 @@ def init_logging():
 
 if __name__ == '__main__':
     try:
+        if sys.platform == 'win32':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
         # 日志初始化
         init_logging()
 
         # 检查数据库连接
-        if check_db() is False:
-            exit()
+        # if check_db() is False:
+        #     exit()
 
         # 初始化Server
         init_rfid_server()
