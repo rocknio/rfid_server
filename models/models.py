@@ -493,3 +493,16 @@ class TReturnInfo(Base):
     return_status = Column(Integer)
     postnumber = Column(String(128))
 
+
+class TScmSyncLog(Base):
+    __tablename__ = 't_scm_sync_logs'
+
+    id = Column(Integer, primary_key=True)
+    trans_id = Column(String(32), nullable=False, server_default=text("''"))
+    entry_order_code = Column(String(32))
+    operate_time = Column(DateTime, nullable=False)
+    supplier_code = Column(String(32))
+    type = Column(String(32))
+    status = Column(Integer, nullable=False)
+    req_body = Column(Text)
+    res_body = Column(String(500), nullable=False)
