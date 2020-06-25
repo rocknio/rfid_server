@@ -66,23 +66,26 @@ class ScmHandler(tornado.web.RequestHandler):
 
             logging.info("t_wms_sync_logs all epcs = {}".format(epcs))
 
-            for one_item in msg_info['items']:
-                qty = one_item['actual_qty']
-                purchase_code = one_item['purchase_order_code']
-                for _ in range(qty):
-                    one_epc = epcs.pop(0)
-                    self.db.query(TEpcDetail).filter(TEpcDetail.epc == one_epc).update({TEpcDetail.order_id: purchase_code})
-                logging.info("update t_epc_detail done! qty = {}, order_id = {}".format(qty, purchase_code))
+            try:
+                for one_item in msg_info['items']:
+                    qty = one_item['actual_qty']
+                    purchase_code = one_item['purchase_order_code']
+                    for _ in range(qty):
+                        one_epc = epcs.pop(0)
+                        self.db.query(TEpcDetail).filter(TEpcDetail.epc == one_epc).update({TEpcDetail.order_id: purchase_code})
+                    logging.info("update t_epc_detail done! qty = {}, order_id = {}".format(qty, purchase_code))
 
-            self.db.commit()
+                self.db.commit()
+            except Exception as err_info:
+                # 只记录日志，可能部分成功，也作为成功处理
+                logging.error('update t_epc_detail failed! err = {}'.format(err_info))
+
             self.write({"msg": "成功", "success": True})
             self.finish()
 
         except Exception as err_info:
             logging.error("update_purchase_code failed, req = {}, err = {}".format(msg_info, err_info))
             self.db.commit()
-
-            # 即使部分成功，也返回成功
-            self.write({"msg": "成功", "success": True})
+            self.write({"msg": "{}".format(err_info), "success": False})
             self.finish()
 
