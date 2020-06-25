@@ -22,6 +22,9 @@ try:
 
     WMS_URL = config.get('default', 'WMS_URL')
 
+    SCM_URL = config.get('default', 'SCM_URL')
+    SCM_SIGN_STRING = config.get('default', 'SCM_SIGN_STRING')
+
     PORTAL_URL = config.get('default', 'PORTAL_URL')
 
     APP_KEY = config.get('default', 'APP_KEY')
