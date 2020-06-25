@@ -76,8 +76,8 @@ if __name__ == '__main__':
         init_logging()
 
         # 检查数据库连接
-        # if check_db() is False:
-        #     exit()
+        if check_db() is False:
+            exit()
 
         # 初始化Server
         init_rfid_server()
