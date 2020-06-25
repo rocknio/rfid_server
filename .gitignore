@@ -257,3 +257,5 @@ rfid.ico
 serv/
 start_rfid_server.py
 start_rfid_server.spec
+/Pipfile.lock
+log
