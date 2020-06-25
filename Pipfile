@@ -1,0 +1,13 @@
+[[source]]
+name = "pypi"
+url = "http://pypi.douban.com/simple/"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+tornado = "~=6.0.4"
+sqlalchemy = "~=1.3.17"
+
+[requires]
+python_version = "3.8"
