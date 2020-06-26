@@ -31,8 +31,18 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             EpcScene.SHIP: self.handle_ship_scene,
             EpcScene.LIST_COUNT: self.handle_list_count_scene,
             EpcScene.UNKNOWN_SCENE: self.handle_unknown_scene,
-            EpcScene.RETURN: self.handle_return_scence   # 2019-04-12 增加退货场景 MK
+            EpcScene.RETURN: self.handle_return_scence  # 2019-04-12 增加退货场景 MK
         }
+    #
+    # # TODO only for test, 正式版本中应去掉
+    # @coroutine
+    # def get(self):
+    #     try:
+    #         import json
+    #         content = json.loads('[{"orderCode":"GG-CYCG17003812-171018171300","qty":64,"sku":"L1740034105","items":[{"no":"43391731212108FF00000008"},{"no":"43391731212108FF00000009"},{"no":"43391731212108FF00000010"},{"no":"43391731212108FF00000011"},{"no":"43391731212108FF00000012"},{"no":"43391731212108FF00000013"},{"no":"43391731212108FF00000014"},{"no":"43391731212108FF00000015"},{"no":"43391731212108FF00000016"},{"no":"43391731212108FF00000017"},{"no":"43391731212108FF00000018"},{"no":"43391731212108FF00000019"},{"no":"43391731212108FF00000020"},{"no":"43391731212108FF00000021"},{"no":"43391731212108FF00000022"},{"no":"43391731212108FF00000023"},{"no":"43391731212108FF00000033"},{"no":"43391731212108FF00000043"},{"no":"43391731212108FF00000053"},{"no":"43391731212108FF00000063"},{"no":"43391731212108FF00000024"},{"no":"43391731212108FF00000034"},{"no":"43391731212108FF00000044"},{"no":"43391731212108FF00000054"},{"no":"43391731212108FF00000064"},{"no":"43391731212108FF00000025"},{"no":"43391731212108FF00000035"},{"no":"43391731212108FF00000045"},{"no":"43391731212108FF00000055"},{"no":"43391731212108FF00000065"},{"no":"43391731212108FF00000026"},{"no":"43391731212108FF00000036"},{"no":"43391731212108FF00000046"},{"no":"43391731212108FF00000056"},{"no":"43391731212108FF00000066"},{"no":"43391731212108FF00000027"},{"no":"43391731212108FF00000037"},{"no":"43391731212108FF00000047"},{"no":"43391731212108FF00000057"},{"no":"43391731212108FF00000067"},{"no":"43391731212108FF00000028"},{"no":"43391731212108FF00000038"},{"no":"43391731212108FF00000048"},{"no":"43391731212108FF00000058"},{"no":"43391731212108FF00000068"},{"no":"43391731212108FF00000029"},{"no":"43391731212108FF00000039"},{"no":"43391731212108FF00000049"},{"no":"43391731212108FF00000059"},{"no":"43391731212108FF00000069"},{"no":"43391731212108FF00000030"},{"no":"43391731212108FF00000040"},{"no":"43391731212108FF00000050"},{"no":"43391731212108FF00000060"},{"no":"43391731212108FF00000070"},{"no":"43391731212108FF00000031"},{"no":"43391731212108FF00000041"},{"no":"43391731212108FF00000051"},{"no":"43391731212108FF00000061"},{"no":"43391731212108FF00000071"},{"no":"43391731212108FF00000032"},{"no":"43391731212108FF00000042"},{"no":"43391731212108FF00000052"},{"no":"43391731212108FF00000062"}],"baco":"43391731212108FF00000072"}]')
+    #         self.sync_receipt_msg_to_scm("tranid", content)
+    #     except Exception as err_info:
+    #         print(err_info)
 
     def write(self, chunk):
         try:
@@ -119,7 +129,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             self.write({MSG_STATUS: ResponseStatus.SYSTEM_ERROR.value,
                         MSG_STATUS_TEXT: response_desc[ResponseStatus.SYSTEM_ERROR]})
             self.finish()
-            
+
     @coroutine
     def identify_epc_scene(self):
         """
@@ -478,7 +488,8 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
 
             total_epcs = set()
 
-            for epcs in chain( statistics_info[UNREPORTED_EPC].values(), statistics_info[REPORTED_EPC][SKU_INFO].values()):
+            for epcs in chain(statistics_info[UNREPORTED_EPC].values(),
+                              statistics_info[REPORTED_EPC][SKU_INFO].values()):
                 total_epcs = total_epcs.union(epcs)
 
             pre_receipted_count = self.db.query(TReceiptDetail).filter(
@@ -533,7 +544,8 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
                     self.finish()
                     return
 
-                received_skus = set(statistics_info[UNREPORTED_EPC].keys()).union(statistics_info[REPORTED_EPC][SKU_INFO].keys())
+                received_skus = set(statistics_info[UNREPORTED_EPC].keys()).union(
+                    statistics_info[REPORTED_EPC][SKU_INFO].keys())
                 for sku in received_skus:
                     success = self.update_pre_receipt_num(box_id, sku)
                     if not success:
@@ -855,7 +867,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
 
             # 退货详情信息
             sku_infos = []
-            sku_no = []
+            # sku_no = []
             returninfo = self.db.query(TReturnInfo.sku).filter(
                 TReturnInfo.epc.in_(total_epcs),
                 TReturnInfo.return_status == ReturnEpcState.PRE_RETURN.value
@@ -1082,7 +1094,6 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             self.error("statistics return epc scene failed: %s", err_info)
             return None
 
-
     @coroutine
     def statistics_receipt_epc_data(self):
         """
@@ -1204,7 +1215,8 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
                     statistics[INVALID_EPC].append(epc)
 
                 # 判断标签类型
-                if epc_type == BOX_EPC_PREIX:statistics[BOX_ID].add(epc)
+                if epc_type == BOX_EPC_PREIX:
+                    statistics[BOX_ID].add(epc)
 
                 elif epc_type == CLOTH_EPC_PREFIX:
                     state = self.ship_epc_state(epc)
@@ -1391,7 +1403,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
         """
         try:
             sku_infos = self.db.query(
-                TReceiptBatchCaseSkuStatistic).\
+                TReceiptBatchCaseSkuStatistic). \
                 filter(TReceiptBatchCaseSkuStatistic.case_id == box_epc).all()
 
             order_sku = set()
@@ -1468,7 +1480,8 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
 
             batch_case_info = self.db.query(TReceiptBatchCase).filter(TReceiptBatchCase.case_id == box_id).one()
 
-            for sku, epcs in chain(statistics_info[REPORTED_EPC][SKU_INFO].items(),statistics_info[UNREPORTED_EPC].items()):
+            for sku, epcs in chain(statistics_info[REPORTED_EPC][SKU_INFO].items(),
+                                   statistics_info[UNREPORTED_EPC].items()):
                 for epc in epcs:
                     receipt_info = TReceiptDetailHistory()
                     receipt_info.batch_id = batch_case_info.batch_id
@@ -1481,7 +1494,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             # 删除detail表中数据
             if box_id in self.msg_info[MSG_EPCS]:
                 self.msg_info[MSG_EPCS].remove(box_id)
-                
+
             result = self.db.query(TReceiptDetail).filter(TReceiptDetail.epc.in_(self.msg_info[MSG_EPCS]))
             result.delete(synchronize_session='fetch')
 
@@ -1550,7 +1563,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
         """
         try:
 
-            result = self.db.query(TShipDetail.sku, func.count("*").label('received_quantity')).\
+            result = self.db.query(TShipDetail.sku, func.count("*").label('received_quantity')). \
                 filter(TShipDetail.ship_id == ship_id).group_by(TShipDetail.sku).all()
 
             for sku, quantity in result:
@@ -1558,7 +1571,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
                     TShipOrderDetail.ship_id == ship_id,
                     TShipOrderDetail.sku == sku,
                     TShipOrderDetail.shipped_quantity == 0
-                ).\
+                ). \
                     update(
                     {
                         TShipOrderDetail.ship_date: datetime.now()
@@ -1567,7 +1580,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             for sku, quantity in result:
                 self.db.query(TShipOrderDetail).filter(
                     TShipOrderDetail.ship_id == ship_id,
-                    TShipOrderDetail.sku == sku).\
+                    TShipOrderDetail.sku == sku). \
                     update(
                     {
                         TShipOrderDetail.shipped_quantity: int(quantity)
@@ -1587,7 +1600,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
         """
         try:
             case_receive_num = self.db.query(func.sum(TReceiptBatchCaseSkuStatistic.received_quantity).
-                                             label('received_quantity')).\
+                                             label('received_quantity')). \
                 filter(TReceiptBatchCaseSkuStatistic.case_id == box_id).one()
 
             self.db.query(TReceiptBatchCase).filter(
@@ -1985,9 +1998,10 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
             keys = inspect(TReceiptDetail).columns.keys()
             get_columns = lambda post: {key: getattr(post, key) for key in keys if key != "id"}
 
-            detial_infos = self.db.query(TReceiptDetail).filter(TReceiptDetail.epc.in_(epcs))
-            self.db.bulk_insert_mappings(TReceiptDetailHistory, (get_columns(detail_info) for detail_info in detial_infos))
-            detial_infos.delete(synchronize_session='fetch')
+            detail_infos = self.db.query(TReceiptDetail).filter(TReceiptDetail.epc.in_(epcs))
+            self.db.bulk_insert_mappings(TReceiptDetailHistory,
+                                         (get_columns(detail_info) for detail_info in detail_infos))
+            detail_infos.delete(synchronize_session='fetch')
             self.db.commit()
             return True
 
@@ -2045,12 +2059,12 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
 
             # 退货的那个时间点到现在是否超过了31天，如果超过了，就直接反馈错误码2008，拒收这批货
             subqry = self.db.query(func.max(TReturnInfo.return_time).label('return_time'),
-                                   TReturnInfo.epc.label('epc'))\
+                                   TReturnInfo.epc.label('epc')) \
                 .filter(TReturnInfo.epc.in_(ss_epc)).group_by(TReturnInfo.epc).subquery()
 
             ls_count = self.db.query(distinct(TReturnInfo.epc).label('epc')) \
                 .join(subqry, and_(TReturnInfo.epc == subqry.c.epc,
-                                   TReturnInfo.return_time == subqry.c.return_time))\
+                                   TReturnInfo.return_time == subqry.c.return_time)) \
                 .filter(TReturnInfo.return_status == ReturnEpcState.RETURN_AL.value).count()
 
             if ls_count > 0:
@@ -2060,7 +2074,7 @@ class EpcSyncHandlerTM(TMBaseReqHandler):
 
             delay_count = self.db.query(distinct(TReturnInfo.epc).label('epc')) \
                 .join(subqry, and_(TReturnInfo.epc == subqry.c.epc,
-                      TReturnInfo.return_time == subqry.c.return_time))\
+                                   TReturnInfo.return_time == subqry.c.return_time)) \
                 .filter(func.datediff(func.now(), TReturnInfo.return_time) > RETURN_EXPIRED_DURATION,
                         TReturnInfo.return_status == ReturnEpcState.RETURN_AL.value).count()
 

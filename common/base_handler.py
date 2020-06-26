@@ -8,7 +8,7 @@ from datetime import datetime
 from os.path import exists
 from urllib.parse import urlencode
 
-import collections
+# import collections
 from sqlalchemy import func
 from tornado.gen import coroutine
 from tornado.web import RequestHandler
@@ -20,6 +20,7 @@ from common.receipt_ship_state import *
 from common.settings import *
 from models.models import *
 from abc import ABCMeta, abstractclassmethod
+import hashlib
 
 __author__ = 'Ennis'
 
@@ -53,6 +54,9 @@ class TMBaseReqHandler(RequestHandler):
             # 生成当次请求的事务号
             self.request_transid = str(uuid.uuid1()).replace("-", "")
             self.trans_identity["request_transid"] = self.request_transid
+
+            if self.request.method == 'GET':
+                return True, None
 
             message = self.request.body.decode('utf-8')
             self.info("receive request: %s", message)
@@ -352,10 +356,64 @@ class TMBaseReqHandler(RequestHandler):
             self.db.add(sync_log)
             self.db.commit()
 
+            # 20200621 增加scm同步
+            self.sync_receipt_msg_to_scm(trans_id, sync_msg)
         except Exception as err_info:
             self.error("sync message to wms failed: %s", err_info)
             self.db.rollback()
             return False
+
+    @coroutine
+    def sync_receipt_msg_to_scm(self, trans_id, wms_sync_msg):
+        self.info("sync receipt to scm, tranid = {}, wms_sync_msg = {}".format(trans_id, wms_sync_msg))
+
+        try:
+            sync_msg = {
+                'transid': trans_id,
+                'entry_order_code': wms_sync_msg[0][URL_ORDER_CODE],
+                'supplier_code': self.query_supplier_id_by_epc(wms_sync_msg[0][URL_ITEMS][0][URL_EPC]),
+                'operate_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'items': []
+            }
+
+            for sku_info in wms_sync_msg:
+                items = {
+                    'item_code': sku_info[URL_SKU],
+                    'actual_qty': sku_info['qty']
+                }
+                sync_msg['items'].append(items)
+
+            param = {
+                'method': 'entryorder.confirm',
+                'sign': hashlib.md5((SCM_SIGN_STRING+sync_msg['operate_time']).encode('utf8')).hexdigest(),
+                'timestamp': sync_msg['operate_time'],
+            }
+
+            url = SCM_URL + "?" + urlencode(param)
+            success, body = yield http_client_request(url, sync_msg, self.trans_identity)
+            if success:
+                self.info("sync receipt to scm SUCCESS! url = {}, content = {}".format(url, sync_msg))
+            else:
+                self.error("sync receipt to scm FAILED! url = {}, content = {}, resp = {}".format(url, sync_msg, body))
+
+            scm_sync_log = TScmSyncLog()
+            scm_sync_log.trans_id = trans_id
+            scm_sync_log.entry_order_code = sync_msg['entry_order_code']
+            scm_sync_log.operate_time = sync_msg['operate_time']
+            scm_sync_log.supplier_code = sync_msg['supplier_code']
+            if success:
+                scm_sync_log.status = 1
+            else:
+                scm_sync_log.status = 0
+            scm_sync_log.req_body = json.dumps(sync_msg)
+            scm_sync_log.res_body = "" if body is None else body
+
+            self.db.commit()
+
+        except Exception as err_info:
+            self.error("sync msg to scm failed: %s", err_info)
+            self.db.rollback()
+            return
 
     @coroutine
     def sync_ship_msg_to_wms(self, statistics_info, trans_id=None):
@@ -612,8 +670,7 @@ class TMBaseReqHandler(RequestHandler):
             ).count()
 
             result = self.db.query(TReceiptBatchCaseSkuStatistic).filter(TReceiptBatchCaseSkuStatistic.sku == sku,
-                                                                TReceiptBatchCaseSkuStatistic.case_id == box_id
-                                                                ).update(
+                                                                         TReceiptBatchCaseSkuStatistic.case_id == box_id).update(
                {
                    TReceiptBatchCaseSkuStatistic.pre_receipt_quantity: epc_count,
                    TReceiptBatchCaseSkuStatistic.received_date: datetime.now()
@@ -774,9 +831,7 @@ class TMBaseReqHandler(RequestHandler):
         try:
             self.db.query(TReceiptDetail).filter(TReceiptDetail.case_id == box_id).delete()
             self.db.query(TReceiptBatchCaseSkuStatistic).\
-                filter(TReceiptBatchCaseSkuStatistic.case_id == box_id).update({
-                    TReceiptBatchCaseSkuStatistic.received_quantity: 0
-                })
+                filter(TReceiptBatchCaseSkuStatistic.case_id == box_id).update({TReceiptBatchCaseSkuStatistic.received_quantity: 0})
             self.db.commit()
 
         except Exception as err_info:
@@ -794,7 +849,7 @@ class TMBaseReqHandler(RequestHandler):
             return result
 
         except Exception as err_info:
-            self.error("get ofder info by box sku failed: %s", err_info)
+            self.error("get order info by box sku failed: %s", err_info)
 
     def query_order_id_by_epc(self, epc):
         try:
@@ -804,6 +859,15 @@ class TMBaseReqHandler(RequestHandler):
         except Exception as err_info:
             self.error("get order id exception: %s", err_info)
             return False, None
+
+    def query_supplier_id_by_epc(self, epc):
+        try:
+            result = self.db.query(TEpcDetail.supplier_id).filter(TEpcDetail.epc == epc).one()
+            return result.supplier_id
+
+        except Exception as err_info:
+            self.error("get supplier_id exception: %s", err_info)
+            return ""
 
 
 class WMSBaseReqHandler(RequestHandler, metaclass=ABCMeta):
@@ -817,9 +881,9 @@ class WMSBaseReqHandler(RequestHandler, metaclass=ABCMeta):
     def data_received(self, chunk):
         pass
 
-    @abstractclassmethod
-    def fields_valid_check(self):
-        return True, None
+    # @abstractclassmethod
+    # def fields_valid_check(self):
+    #     return True, None
 
     @coroutine
     def prepare(self):
@@ -838,12 +902,12 @@ class WMSBaseReqHandler(RequestHandler, metaclass=ABCMeta):
             self.info("order sync content: %s", content)
             self.msg_info = json.loads(content)
 
-            valid, reason = self.fields_valid_check()
-            if not valid:
-                self.set_status(500)
-                self.write({MSG_STATUS: reason.value,
-                            MSG_STATUS_TEXT: response_desc[reason]})
-                self.finish()
+            # valid, reason = self.fields_valid_check()
+            # if not valid:
+            #     self.set_status(500)
+            #     self.write({MSG_STATUS: reason.value,
+            #                 MSG_STATUS_TEXT: response_desc[reason]})
+            #     self.finish()
 
         except Exception as err_info:
             logging.error("prepare failed: %s", err_info)
