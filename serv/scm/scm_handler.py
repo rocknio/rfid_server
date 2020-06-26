@@ -74,12 +74,11 @@ class ScmHandler(tornado.web.RequestHandler):
                         one_epc = epcs.pop(0)
                         self.db.query(TEpcDetail).filter(TEpcDetail.epc == one_epc).update({TEpcDetail.order_id: purchase_code})
                     logging.info("update t_epc_detail done! qty = {}, order_id = {}".format(qty, purchase_code))
-
-                self.db.commit()
             except Exception as err_info:
                 # 只记录日志，可能部分成功，也作为成功处理
                 logging.error('update t_epc_detail failed! err = {}'.format(err_info))
 
+            self.db.commit()
             self.write({"msg": "成功", "success": True})
             self.finish()
 
