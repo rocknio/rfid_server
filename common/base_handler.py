@@ -383,9 +383,10 @@ class TMBaseReqHandler(RequestHandler):
                 }
                 sync_msg['items'].append(items)
 
+            sign_src = SCM_SIGN_STRING + sync_msg['operate_time']
             param = {
                 'method': 'entryorder.confirm',
-                'sign': hashlib.md5((SCM_SIGN_STRING+sync_msg['operate_time']).encode('utf8')).hexdigest(),
+                'sign': hashlib.md5(sign_src.encode('utf8')).hexdigest(),
                 'timestamp': sync_msg['operate_time'],
             }
 

@@ -27,12 +27,13 @@ def http_client_request(url, msg, log_trans, method='POST'):
         if not isinstance(msg, str):
             body = json.dumps(msg)
 
+        headers = {"Content-Type": "application/json"}
         client = tornado.httpclient.AsyncHTTPClient()
 
         retry_time = 0
         while retry_time < POST_RETRY_TIMES:
             try:
-                response = yield client.fetch(url, method=method, body=body, request_timeout=POST_REQUEST_TIMEOUT)
+                response = yield client.fetch(url, method=method, headers=headers, body=body, request_timeout=POST_REQUEST_TIMEOUT)
                 logging.info('time[%d] response code: %d, response body:%s', retry_time+1,
                              response.code, response.body, extra=log_trans)
 

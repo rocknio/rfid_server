@@ -5,9 +5,24 @@ import tornado.gen
 from common.base_handler import TMBaseReqHandler
 from common.msg_field import *
 from common.receipt_ship_state import ReturnEpcState
+from models.models import *
+from common.settings import *
+from datetime import datetime
+import hashlib
+from urllib.parse import urlencode
+from common.http_request import http_client_request
 
 
 class ReturnTrackHandlerTM(TMBaseReqHandler):
+    # TODO only for test
+    @tornado.gen.coroutine
+    def get(self):
+        self.sync_returned_info_to_scm('trans_id', ['43391810167401FF02052111', '43391810167401FF02052113',
+                                                    '43391810167401FF02052115',
+                                                    '43391840002406FF01939477', '43391840002406FF01939509'])
+        self.write("ok")
+        self.finish()
+
     @tornado.gen.coroutine
     def post(self):
         """
@@ -61,4 +76,47 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
                         MSG_STATUS_TEXT: response_desc[ResponseStatus.SYSTEM_ERROR] + ECP_RET_FAIL.replace("X", strfail)
                         })
             self.finish()
+
+        # 增加同步scm接口
+        self.sync_returned_info_to_scm(epc_return)
         return
+
+    @tornado.gen.coroutine
+    def sync_returned_info_to_scm(self, trans_id, epc_return):
+        try:
+            logging.info("sync returned info to scm, epcs = {}".format(epc_return))
+            return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(epc_return)).all()
+
+            return_info_dict = {}
+            for one_return_info in return_infos:
+                return_info_dict[one_return_info[0]] = []
+
+            for one_return_info in return_infos:
+                return_info_dict[one_return_info[0]].append(one_return_info[1])
+            logging.info("select return info = {}".format(return_info_dict))
+
+            sync_msg = {
+                'transid': trans_id,
+                'operate_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'items': []
+            }
+
+            for k, v in return_info_dict.items():
+                purchase_order_code = sqlf.db.query(TEpcDetail.order_id).filter(TEpcDetail.epc == v[0]).one()
+                tmp = {'item_code': k, 'actual_qty': len(v), 'purchase_order_code': purchase_order_code[0]}
+                sync_msg['items'].append(tmp)
+
+            param = {
+                'method': 'stockout.confirm',
+                'sign': hashlib.md5((SCM_SIGN_STRING + sync_msg['operate_time']).encode('utf8')).hexdigest(),
+                'timestamp': sync_msg['operate_time'],
+            }
+
+            url = SCM_URL + "?" + urlencode(param)
+            success, body = yield http_client_request(url, sync_msg, self.trans_identity)
+            if success:
+                self.info("sync return info to scm SUCCESS! url = {}, content = {}".format(url, sync_msg))
+            else:
+                self.error("sync return info to scm FAILED! url = {}, content = {}, resp = {}".format(url, sync_msg, body))
+        except Exception as err_info:
+            logging.error("sync returned info to scm failed! err = {}".format(err_info))
