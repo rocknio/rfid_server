@@ -398,10 +398,11 @@ class TMBaseReqHandler(RequestHandler):
                 self.error("sync receipt to scm FAILED! url = {}, content = {}, resp = {}".format(url, sync_msg, body))
 
             scm_sync_log = TScmSyncLog()
-            scm_sync_log.trans_id = trans_id
+            scm_sync_log.transid = trans_id
             scm_sync_log.entry_order_code = sync_msg['entry_order_code']
             scm_sync_log.operate_time = sync_msg['operate_time']
             scm_sync_log.supplier_code = sync_msg['supplier_code']
+            scm_sync_log.type = 'receipt'
             if success:
                 scm_sync_log.status = 1
             else:
@@ -409,6 +410,7 @@ class TMBaseReqHandler(RequestHandler):
             scm_sync_log.req_body = json.dumps(sync_msg)
             scm_sync_log.res_body = "" if body is None else body
 
+            self.db.add(scm_sync_log)
             self.db.commit()
 
         except Exception as err_info:

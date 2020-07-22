@@ -1,5 +1,5 @@
 import logging
-
+import json
 import tornado.gen
 
 from common.base_handler import TMBaseReqHandler
@@ -78,7 +78,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
             self.finish()
 
         # 增加同步scm接口
-        self.sync_returned_info_to_scm(epc_return)
+        self.sync_returned_info_to_scm(trans_id, epc_return)
         return
 
     @tornado.gen.coroutine
@@ -102,7 +102,12 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
             }
 
             for k, v in return_info_dict.items():
-                purchase_order_code = sqlf.db.query(TEpcDetail.order_id).filter(TEpcDetail.epc == v[0]).one()
+                try:
+                    purchase_order_code = self.db.query(TEpcDetail.order_id).filter(TEpcDetail.epc == v[0]).one()
+                except Exception as err_info:
+                    logging.warning("can't find purchase_order_code from t_epc_detail, epc = {}".format(err_info))
+                    purchase_order_code = [""]
+
                 tmp = {'item_code': k, 'actual_qty': len(v), 'purchase_order_code': purchase_order_code[0]}
                 sync_msg['items'].append(tmp)
 
@@ -115,8 +120,22 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
             url = SCM_URL + "?" + urlencode(param)
             success, body = yield http_client_request(url, sync_msg, self.trans_identity)
             if success:
-                self.info("sync return info to scm SUCCESS! url = {}, content = {}".format(url, sync_msg))
+                logging.info("sync return info to scm SUCCESS! url = {}, content = {}".format(url, sync_msg))
             else:
-                self.error("sync return info to scm FAILED! url = {}, content = {}, resp = {}".format(url, sync_msg, body))
+                logging.error("sync return info to scm FAILED! url = {}, content = {}, resp = {}".format(url, sync_msg, body))
+
+            scm_sync_log = TScmSyncLog()
+            scm_sync_log.transid = trans_id
+            scm_sync_log.operate_time = sync_msg['operate_time']
+            scm_sync_log.type = 'return'
+            if success:
+                scm_sync_log.status = 1
+            else:
+                scm_sync_log.status = 0
+            scm_sync_log.req_body = json.dumps(sync_msg)
+            scm_sync_log.res_body = "" if body is None else body
+
+            self.db.add(scm_sync_log)
+            self.db.commit()
         except Exception as err_info:
             logging.error("sync returned info to scm failed! err = {}".format(err_info))

@@ -498,7 +498,7 @@ class TScmSyncLog(Base):
     __tablename__ = 't_scm_sync_logs'
 
     id = Column(Integer, primary_key=True)
-    trans_id = Column(String(32), nullable=False, server_default=text("''"))
+    transid = Column(String(32), nullable=False, server_default=text("''"))
     entry_order_code = Column(String(32))
     operate_time = Column(DateTime, nullable=False)
     supplier_code = Column(String(32))
