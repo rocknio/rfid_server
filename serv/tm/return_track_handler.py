@@ -85,6 +85,8 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
         try:
             logging.info("sync returned info to scm, epcs = {}".format(epc_return))
             return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(epc_return)).filter(TReturnInfo.inbound_flag == 1).all()
+            if return_infos.__len__() <= 0:
+                return
 
             return_info_dict = {}
             for one_return_info in return_infos:
