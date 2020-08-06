@@ -492,6 +492,7 @@ class TReturnInfo(Base):
     return_reason = Column(String(32))
     return_status = Column(Integer)
     postnumber = Column(String(128))
+    inbound_flag = Column(Integer)
 
 
 class TScmSyncLog(Base):

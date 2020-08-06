@@ -1,4 +1,3 @@
-import logging
 import json
 import tornado.gen
 
@@ -85,7 +84,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
     def sync_returned_info_to_scm(self, trans_id, epc_return):
         try:
             logging.info("sync returned info to scm, epcs = {}".format(epc_return))
-            return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(epc_return)).all()
+            return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(epc_return)).filter(TReturnInfo.inbound_flag == 1).all()
 
             return_info_dict = {}
             for one_return_info in return_infos:
