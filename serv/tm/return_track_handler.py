@@ -139,4 +139,5 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
             self.db.add(scm_sync_log)
             self.db.commit()
         except Exception as err_info:
+            self.db.rollback()
             logging.error("sync returned info to scm failed! err = {}".format(err_info))

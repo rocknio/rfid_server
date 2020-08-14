@@ -653,7 +653,7 @@ class TMBaseReqHandler(RequestHandler):
             return True
 
         except Exception as err_info:
-            self.error("update receipt order state failed: %s", err_info)
+            self.error("update receipt sku state failed: %s", err_info)
             return False
 
     def update_pre_receipt_num(self, box_id, sku):
