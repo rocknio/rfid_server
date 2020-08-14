@@ -19,7 +19,7 @@ from common.msg_field import *
 from common.receipt_ship_state import *
 from common.settings import *
 from models.models import *
-from abc import ABCMeta, abstractclassmethod
+from abc import ABCMeta
 import hashlib
 
 __author__ = 'Ennis'
@@ -66,7 +66,7 @@ class TMBaseReqHandler(RequestHandler):
             valid, reason = self.fields_valid_check()
             if not valid:
                 self.set_status(500)
-                self.write({MSG_STATUS: reason.value,
+                self.write({MSG_STATUS: reason,
                             MSG_STATUS_TEXT: response_desc[reason]})
                 self.finish()
 
@@ -365,7 +365,7 @@ class TMBaseReqHandler(RequestHandler):
 
     @coroutine
     def sync_receipt_msg_to_scm(self, trans_id, wms_sync_msg):
-        self.info("sync receipt to scm, tranid = {}, wms_sync_msg = {}".format(trans_id, wms_sync_msg))
+        self.info("sync receipt to scm, transid = {}, wms_sync_msg = {}".format(trans_id, wms_sync_msg))
 
         try:
             sync_msg = {
@@ -797,7 +797,7 @@ class TMBaseReqHandler(RequestHandler):
             self.error("update ship order state failed: %s", err_info)
             return False
 
-    def udpate_return_trackno_status(self, epc, state, track):
+    def update_return_trackno_status(self, epc, state, track):
         """
                 更新退货状态
 
@@ -834,7 +834,7 @@ class TMBaseReqHandler(RequestHandler):
         try:
             self.db.query(TReceiptDetail).filter(TReceiptDetail.case_id == box_id).delete()
             self.db.query(TReceiptBatchCaseSkuStatistic).\
-                filter(TReceiptBatchCaseSkuStatistic.case_id == box_id).update({TReceiptBatchCaseSkuStatistic.received_quantity: 0})
+                filter(TReceiptBatchCaseSkuStatistic.case_id == box_id).update({TReceiptBatchCaseSkuStatistic.pre_receipt_quantity: 0})
             self.db.commit()
 
         except Exception as err_info:

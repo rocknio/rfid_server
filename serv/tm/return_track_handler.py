@@ -57,7 +57,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
 
         lst_count = []
         for epc in epc_return:
-            success = self.udpate_return_trackno_status(epc, ReturnEpcState.RETURN_AL, trackno)
+            success = self.update_return_trackno_status(epc, ReturnEpcState.RETURN_AL, trackno)
             # 失败时将失败的标签写入list
             if not success:
                 lst_count.append(epc)
