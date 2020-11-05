@@ -17,6 +17,7 @@ from common.dbutils import check_db
 from common.custom_log_handler import FileFormatter
 from common.base_handler import TMBaseReqHandler
 from common.retry_sync_wms import retry_sync_wms
+from common.retry_sync_scm import retry_sync_scm
 
 __author__ = 'Ennis'
 
@@ -40,6 +41,9 @@ def init_rfid_server():
         logging.info("start Server at: %d", SERVER_PORT)
         sync_retry = PeriodicCallback(retry_sync_wms, WMS_RETRY_INTERVAL * 1000)
         sync_retry.start()
+
+        scm_sync_retry = PeriodicCallback(retry_sync_scm, WMS_RETRY_INTERVAL * 1000)
+        scm_sync_retry.start()
 
         TMBaseReqHandler.load_transaction_data()
     except Exception as e:

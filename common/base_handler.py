@@ -407,6 +407,7 @@ class TMBaseReqHandler(RequestHandler):
                 scm_sync_log.status = 1
             else:
                 scm_sync_log.status = 0
+            scm_sync_log.url_params = json.dumps(param)
             scm_sync_log.req_body = json.dumps(sync_msg)
             scm_sync_log.res_body = "" if body is None else body
 

@@ -505,5 +505,6 @@ class TScmSyncLog(Base):
     supplier_code = Column(String(32))
     type = Column(String(32))
     status = Column(Integer, nullable=False)
+    url_params = Column(String(256))
     req_body = Column(Text)
     res_body = Column(String(500), nullable=False)
