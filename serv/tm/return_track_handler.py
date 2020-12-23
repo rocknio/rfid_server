@@ -80,11 +80,24 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
         self.sync_returned_info_to_scm(trans_id, epc_return)
         return
 
+    def filter_return_epcs(self, epc_return):
+        ret = []
+        for one_epc in epc_return:
+            return_info = self.db.query(TReturnInfo).filter(TReturnInfo.epc == one_epc).order_by(TReturnInfo.received_date.desc()).first()
+            if return_info and return_info.inbound_flag == 1:
+                ret.append(one_epc)
+
+        return ret
+
     @tornado.gen.coroutine
     def sync_returned_info_to_scm(self, trans_id, epc_return):
         try:
             logging.info("sync returned info to scm, epcs = {}".format(epc_return))
-            return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(epc_return)).filter(TReturnInfo.inbound_flag == 1).all()
+
+            return_pecs = self.filter_return_epcs(epc_return)
+            logging.info("sync returned info to scm, filter_epcs = {}".format(epc_return))
+
+            return_infos = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc.in_(return_pecs)).filter(TReturnInfo.inbound_flag == 1).all()
             if len(return_infos) <= 0:
                 return
 
