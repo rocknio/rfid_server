@@ -1,4 +1,6 @@
 import json
+import uuid
+
 import tornado.gen
 
 from common.base_handler import TMBaseReqHandler
@@ -15,10 +17,9 @@ from common.http_request import http_client_request
 class ReturnTrackHandlerTM(TMBaseReqHandler):
     # TODO only for test
     @tornado.gen.coroutine
-    def get(self):
-        self.sync_returned_info_to_scm('trans_id', ['43391810167401FF02052111', '43391810167401FF02052113',
-                                                    '43391810167401FF02052115',
-                                                    '43391840002406FF01939477', '43391840002406FF01939509'])
+    def delete(self):
+        transid = 'RESEND' + uuid.uuid4().__str__().upper().replace('-', '')[6:]
+        self.sync_returned_info_to_scm(transid, self.msg_info['epcs'], self.msg_info['operate_time'])
         self.write("ok")
         self.finish()
 
@@ -90,7 +91,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
         return ret
 
     @tornado.gen.coroutine
-    def sync_returned_info_to_scm(self, trans_id, epc_return):
+    def sync_returned_info_to_scm(self, trans_id, epc_return, operate_time=None):
         try:
             logging.info("sync returned info to scm, epcs = {}".format(epc_return))
 
@@ -111,7 +112,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
 
             sync_msg = {
                 'transid': trans_id,
-                'operate_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'operate_time': operate_time if operate_time is not None else datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'items': []
             }
 
