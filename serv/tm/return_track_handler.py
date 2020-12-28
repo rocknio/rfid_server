@@ -83,7 +83,7 @@ class ReturnTrackHandlerTM(TMBaseReqHandler):
     def filter_return_epcs(self, epc_return):
         ret = []
         for one_epc in epc_return:
-            return_info = self.db.query(TReturnInfo.sku, TReturnInfo.epc).filter(TReturnInfo.epc == one_epc).order_by(TReturnInfo.received_date.desc()).first()
+            return_info = self.db.query(TReturnInfo.sku, TReturnInfo.epc, TReturnInfo.inbound_flag).filter(TReturnInfo.epc == one_epc).order_by(TReturnInfo.received_date.desc()).first()
             if return_info and return_info.inbound_flag == 1:
                 ret.append(one_epc)
 
